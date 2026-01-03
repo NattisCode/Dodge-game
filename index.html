@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dodge the Blocks</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+html,body{margin:0;background:#111;color:#fff;overflow:hidden;font-family:Arial}
+canvas{display:block;margin:auto;background:#222}
+#score{position:fixed;top:10px;left:0;right:0;text-align:center}
+</style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<canvas id="game"></canvas>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')}
+const c=document.getElementById('game'),x=c.getContext('2d'),s=document.getElementById('score');
+function r(){c.width=innerWidth;c.height=innerHeight}addEventListener('resize',r);r();
+let p={x:c.width/2-20,y:c.height-60,w:40,h:40,s:6},b=[],sc=0,l=0,rp=0,go=0;
+addEventListener('keydown',e=>{if(e.key=='ArrowLeft')l=1;if(e.key=='ArrowRight')rp=1});
+addEventListener('keyup',e=>{if(e.key=='ArrowLeft')l=0;if(e.key=='ArrowRight')rp=0});
+c.addEventListener('touchstart',e=>{e.touches[0].clientX<c.width/2?l=1:rp=1});
+c.addEventListener('touchend',()=>{l=rp=0});
+setInterval(()=>b.push({x:Math.random()*(c.width-40),y:-40,s:40,v:3+Math.random()*3}),700);
+function col(a,d){return a.x<d.x+d.s&&a.x+a.w>d.x&&a.y<d.y+d.s&&a.y+a.h>d.y}
+(function loop(){
+ if(go)return;
+ x.clearRect(0,0,c.width,c.height);
+ if(l&&p.x>0)p.x-=p.s;if(rp&&p.x<c.width-p.w)p.x+=p.s;
+ x.fillStyle='#4CAF50';x.fillRect(p.x,p.y,p.w,p.h);
+ x.fillStyle='#E53935';
+ b.forEach(d=>{d.y+=d.v;x.fillRect(d.x,d.y,d.s,d.s);if(col(p,d)){go=1;alert('Game Over! Score: '+sc);location.reload()}});
+ b=b.filter(d=>d.y<c.height);sc++;s.textContent='Score: '+sc;requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
