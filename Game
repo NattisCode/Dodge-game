@@ -1,0 +1,118 @@
+/* ================================================
+Modular Dodge Game Files
+=============================================== */
+
+/* ================= index.html ================= */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dodge Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+<script src="skins.js" defer></script>
+<script src="menu.js" defer></script>
+<script src="game.js" defer></script>
+<script src="pause.js" defer></script>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="menu"></div>
+<div id="score">Score: 0</div>
+<div id="pauseOverlay" style="display:none;">Paused<br><button id="resumeBtn">Resume</button></div>
+</body>
+</html>
+
+/* ================= skins.js ================= */
+const skins = {
+  classic: { player: '#4CAF50', block: '#E53935' },
+  neon: { player: '#0FF', block: '#F0F' },
+  fire: { player: '#FF4500', block: '#FFD700' }
+};
+let currentSkin = 'classic';
+
+function setSkin(name) {
+  if (skins[name]) currentSkin = name;
+}
+
+/* ================= menu.js ================= */
+const menuDiv = document.getElementById('menu');
+function showMenu() {
+  menuDiv.innerHTML = `
+    <h1>Dodge Game</h1>
+    <button onclick="startGame()">Start</button>
+    <h3>Skins</h3>
+    ${Object.keys(skins).map(s=>`<button onclick="setSkin('${s}')">${s}</button>`).join('')}
+  `;
+}
+
+function startGame() {
+  menuDiv.style.display = 'none';
+  initGame();
+}
+
+window.onload = showMenu;
+
+/* ================= game.js ================= */
+let canvas = document.getElementById('gameCanvas');
+let ctx = canvas.getContext('2d');
+let player, blocks, score, gameOver, leftPressed, rightPressed;
+
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function initGame() {
+  player = { x: canvas.width/2-20, y: canvas.height-60, w:40, h:40, speed:6 };
+  blocks = [];
+  score = 0;
+  gameOver = false;
+  leftPressed = false;
+  rightPressed = false;
+  document.addEventListener('keydown', keyDown);
+  document.addEventListener('keyup', keyUp);
+  canvas.addEventListener('touchstart', touchStart);
+  canvas.addEventListener('touchend', touchEnd);
+  setInterval(spawnBlock, 700);
+  gameLoop();
+}
+
+function keyDown(e){if(e.key=='ArrowLeft')leftPressed=true;if(e.key=='ArrowRight')rightPressed=true;}
+function keyUp(e){if(e.key=='ArrowLeft')leftPressed=false;if(e.key=='ArrowRight')rightPressed=false;}
+function touchStart(e){let x=e.touches[0].clientX;if(x<canvas.width/2)leftPressed=true;else rightPressed=true;}
+function touchEnd(){leftPressed=rightPressed=false;}
+
+function spawnBlock(){blocks.push({x:Math.random()*(canvas.width-40),y:-40,s:40,v:3+Math.random()*3});}
+function collide(a,b){return a.x<a.x+b.s && a.x+a.w>b.x && a.y<a.y+b.s && a.y+a.h>b.y;}
+
+function gameLoop(){
+  if(gameOver)return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(leftPressed && player.x>0)player.x-=player.speed;
+  if(rightPressed && player.x<canvas.width-player.w)player.x+=player.speed;
+  ctx.fillStyle = skins[currentSkin].player;
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+  ctx.fillStyle = skins[currentSkin].block;
+  blocks.forEach(b=>{b.y+=b.v;ctx.fillRect(b.x,b.y,b.s,b.s);if(collide(player,b)){gameOver=true;showMenu();}});
+  blocks=blocks.filter(b=>b.y<canvas.height);
+  score++;
+  document.getElementById('score').innerText='Score: '+score;
+  requestAnimationFrame(gameLoop);
+}
+
+/* ================= pause.js ================= */
+const pauseOverlay = document.getElementById('pauseOverlay');
+document.addEventListener('keydown', e=>{if(e.key=='Escape')togglePause();});
+document.getElementById('resumeBtn').onclick=togglePause;
+
+function togglePause(){
+  if(gameOver)return;
+  if(pauseOverlay.style.display==='none'){
+    pauseOverlay.style.display='block';
+    cancelAnimationFrame(gameLoop);
+  } else {
+    pauseOverlay.style.display='none';
+    gameLoop();
+  }
+}
